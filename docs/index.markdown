@@ -4,6 +4,8 @@ layout: home
 
 Hello! My name is Enrico. I'm a software engineer based in Sydney, Australia.
 
+You can view my resume [here](Enrico Susatyo 2026.pdf).
+
 You can find me on the internet:
 - [Twitter](https://www.twitter.com/esusatyo)
 - [GitHub](https://github.com/esusatyo)
