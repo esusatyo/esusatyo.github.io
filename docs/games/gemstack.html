@@ -1,3 +1,7 @@
+---
+permalink: /gemstack.html
+---
+{% raw %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -571,7 +575,9 @@
     setTimeout(function(){
       Object.keys(cleared).forEach(function(key){
         var parts = key.split('-');
-        board[+parts[0]][+parts[1]] = null;
+        var r = +parts[0], c = +parts[1];
+        board[r][c] = null;
+        cellEl(r, c).classList.remove('clearing');
       });
       renderBoard();
       var bonus = totalLines * totalLines * 50;
@@ -745,3 +751,4 @@
 </script>
 </body>
 </html>
+{% endraw %}
