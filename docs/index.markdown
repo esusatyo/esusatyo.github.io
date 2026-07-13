@@ -17,3 +17,4 @@ Some of the things I have vibe coded lately:
 - [Sydney golf finder](https://esusatyo.net/sydney-golf-finder/)
 - [Sydney tennis finder](https://esusatyo.net/sydney-tennis-finder/)
 - [Fujifilm camera comparison tool](https://esusatyo.net/fuji-compare-tool/)
+- [Solar Forecast](https://esusatyo.net/solar_forecast.html)

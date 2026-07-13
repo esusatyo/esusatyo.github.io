@@ -1,0 +1,1063 @@
+---
+permalink: /solar_forecast.html
+---
+{% raw %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Thornleigh solar output forecast</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600&family=Inter:wght@400;500;600&display=swap');
+
+:root{
+  --bg:#F4F7FA; --surface:#FFFFFF; --surface-alt:#EBF0F5; --border:#DCE3EA;
+  --text:#101826; --text-2:#4E5C6C; --text-mut:#8A97A3;
+  --amber:#D98C1C; --amber-bg:#FBEED9; --amber-deep:#8A5A0E;
+  --sky:#2E6FA3; --sky-bg:#E4EEF6; --sky-deep:#1E4A6E;
+  --high:#1F8064; --high-bg:#E1F3EC;
+  --med:#B8791C; --med-bg:#FBEED9;
+  --low:#6B7684; --low-bg:#EBEEF1;
+  --danger:#B24B3C; --danger-bg:#FBEAE6;
+  --radius:10px; --radius-lg:16px;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0A0F17; --surface:#121A26; --surface-alt:#182233; --border:#26334A;
+    --text:#EEF2F6; --text-2:#AEBBC9; --text-mut:#71818F;
+    --amber:#F0B45C; --amber-bg:#2A2011; --amber-deep:#F5C783;
+    --sky:#6FA8D8; --sky-bg:#152230; --sky-deep:#9CC5E8;
+    --high:#4FBE9C; --high-bg:#12261F;
+    --med:#E0A84E; --med-bg:#2A2011;
+    --low:#8D99A6; --low-bg:#1B222B;
+    --danger:#E08571; --danger-bg:#2B1815;
+  }
+}
+*{box-sizing:border-box;}
+body{
+  margin:0; background:var(--bg); color:var(--text);
+  font-family:'Inter',-apple-system,sans-serif; font-variant-numeric:tabular-nums;
+  padding:32px 20px 80px;
+}
+.wrap{max-width:920px; margin:0 auto;}
+h1{font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:26px; margin:0 0 4px;}
+.subtitle{color:var(--text-2); font-size:14px; margin:0 0 28px;}
+.card{
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg);
+  padding:20px 22px; margin-bottom:20px;
+}
+.section-label{font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-mut); font-weight:600; margin:0 0 14px;}
+.metrics{display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px;}
+.metric{background:var(--surface-alt); border-radius:var(--radius); padding:14px 16px;}
+.metric .num{font-family:'Space Grotesk',sans-serif; font-size:22px; font-weight:600;}
+.metric .lbl{font-size:12px; color:var(--text-2); margin-top:2px;}
+.state{display:flex; align-items:center; gap:10px; padding:16px 0; color:var(--text-2); font-size:14px;}
+.spinner{width:16px; height:16px; border-radius:50%; border:2px solid var(--border); border-top-color:var(--sky); animation:spin .8s linear infinite; flex:none;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.errbox{background:var(--danger-bg); border:1px solid var(--danger); border-radius:var(--radius); padding:14px 16px; color:var(--danger); font-size:14px; line-height:1.5;}
+button{
+  font-family:'Inter',sans-serif; font-size:13px; font-weight:500; cursor:pointer;
+  background:var(--surface); border:1px solid var(--border); color:var(--text);
+  border-radius:var(--radius); padding:8px 14px;
+}
+button:hover{background:var(--surface-alt);}
+button.primary{background:var(--sky); border-color:var(--sky); color:#fff;}
+.toprow{display:flex; align-items:flex-start; justify-content:space-between; gap:16px;}
+.days{display:flex; gap:10px; overflow-x:auto; padding-bottom:4px; margin-top:4px;}
+.day{
+  flex:0 0 108px; background:var(--surface-alt); border-radius:var(--radius); padding:12px 10px;
+  text-align:center; border:1px solid transparent;
+}
+.day.today{border-color:var(--sky);}
+.day .wd{font-size:12px; color:var(--text-2); font-weight:600;}
+.day .dt{font-size:11px; color:var(--text-mut); margin-bottom:8px;}
+.day svg{display:block; margin:0 auto 6px;}
+.day .kwh{font-family:'Space Grotesk',sans-serif; font-size:19px; font-weight:600;}
+.day .rng{font-size:11px; color:var(--text-mut); margin:2px 0 8px;}
+.day .cc{font-size:11px; color:var(--text-2);}
+.pill{display:inline-block; font-size:10px; font-weight:600; padding:2px 8px; border-radius:99px; margin-top:6px;}
+.pill.high{background:var(--high-bg); color:var(--high);}
+.pill.med{background:var(--med-bg); color:var(--med);}
+.pill.low{background:var(--low-bg); color:var(--low);}
+.toggle-row{text-align:center; margin-top:14px;}
+.chart-wrap{position:relative; width:100%; height:260px;}
+.chart-wrap.small{height:220px;}
+.legend{display:flex; flex-wrap:wrap; gap:16px; font-size:12px; color:var(--text-2); margin-bottom:10px;}
+.legend span{display:inline-flex; align-items:center; gap:6px;}
+.sw{width:10px; height:10px; border-radius:2px; display:inline-block;}
+.seg{display:inline-flex; background:var(--surface-alt); border-radius:var(--radius); padding:3px; gap:2px;}
+.seg button{border:none; background:transparent; padding:6px 14px; border-radius:calc(var(--radius) - 3px); color:var(--text-2);}
+.seg button:hover{background:transparent; color:var(--text);}
+.seg button.active{background:var(--surface); color:var(--text); box-shadow:0 1px 2px rgba(0,0,0,0.08);}
+.chart-head{display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:14px;}
+.nav-row{display:flex; align-items:center; gap:10px;}
+.nav-row button{padding:6px 10px;}
+.nav-row .navlabel{font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:14px; min-width:140px; text-align:center;}
+.nav-row button:disabled{opacity:.35; cursor:default;}
+.nav-row button:disabled:hover{background:var(--surface);}
+input[type="date"]{
+  font-family:'Inter',sans-serif; font-size:13px; color:var(--text);
+  background:var(--surface-alt); border:1px solid var(--border); border-radius:var(--radius);
+  padding:7px 10px; height:36px;
+}
+.range-pick-row{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:16px;}
+.range-pick-row label{font-size:13px; color:var(--text-2);}
+.src-tag{font-size:10px; font-weight:600; padding:1px 7px; border-radius:99px; margin-top:4px; display:inline-block;}
+.src-tag.forecast{background:var(--sky-bg); color:var(--sky-deep);}
+.src-tag.climatology{background:var(--surface-alt); color:var(--text-2);}
+input[type="text"], input[type="number"]{
+  font-family:'Inter',sans-serif; font-size:13px; color:var(--text);
+  background:var(--surface-alt); border:1px solid var(--border); border-radius:var(--radius);
+  padding:7px 10px; height:36px;
+}
+input[type="file"]{ font-family:'Inter',sans-serif; font-size:13px; color:var(--text-2); }
+.field{margin-bottom:18px;}
+.field label{font-size:13px; color:var(--text-2); display:block; margin-bottom:6px; font-weight:500;}
+.loc-result{display:block; width:100%; text-align:left; margin-bottom:6px;}
+.loc-result.active{background:var(--sky); border-color:var(--sky); color:#fff;}
+.status-ok{color:var(--high);}
+.status-err{color:var(--danger);}
+.note{font-size:12.5px; color:var(--text-mut); line-height:1.6; margin-top:10px;}
+.footer{font-size:12px; color:var(--text-mut); line-height:1.7; margin-top:8px;}
+.footer a{color:var(--sky);}
+.grid2{display:grid; grid-template-columns:1.4fr 1fr; gap:20px;}
+@media (max-width:680px){.grid2{grid-template-columns:1fr;}}
+
+.modal-backdrop{
+  display:none; position:fixed; inset:0; background:rgba(8,12,18,0.55);
+  align-items:flex-start; justify-content:center; padding:40px 16px; z-index:100; overflow-y:auto;
+}
+.modal-backdrop.open{display:flex;}
+.modal{
+  background:var(--surface); border-radius:var(--radius-lg); max-width:640px; width:100%;
+  padding:26px 26px 22px; position:relative; box-shadow:0 20px 60px rgba(0,0,0,0.35);
+}
+.modal-close{position:absolute; top:16px; right:16px; padding:4px 10px;}
+.modal h2{font-family:'Space Grotesk',sans-serif; font-size:20px; font-weight:600; margin:0 0 4px;}
+.modal h3{font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:600; margin:22px 0 6px; color:var(--text);}
+.modal p{font-size:13.5px; color:var(--text-2); line-height:1.65; margin:0 0 8px;}
+.modal .modal-sub{font-size:12.5px; color:var(--text-mut); margin:0 0 18px;}
+.flow{display:flex; align-items:stretch; gap:6px; flex-wrap:wrap; margin:16px 0 4px;}
+.flow-step{
+  flex:1; min-width:120px; background:var(--surface-alt); border-radius:var(--radius); padding:10px 12px;
+  font-size:11.5px; color:var(--text-2); text-align:center; line-height:1.4;
+}
+.flow-step b{display:block; font-size:12.5px; color:var(--text); margin-bottom:2px; font-family:'Space Grotesk',sans-serif;}
+.flow-arrow{display:flex; align-items:center; justify-content:center; color:var(--text-mut); font-size:16px; padding:0 2px;}
+@media (max-width:520px){ .flow{flex-direction:column;} .flow-arrow{transform:rotate(90deg); padding:2px 0;} }
+.modal-stats{background:var(--surface-alt); border-radius:var(--radius); padding:12px 14px; font-size:12.5px; color:var(--text-2); margin-top:6px;}
+.modal-stats b{color:var(--text);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="toprow">
+    <div>
+      <h1>Solar output forecast</h1>
+      <p class="subtitle" id="headerMeta">Upload your production data and set a location to get started</p>
+    </div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      <button id="methodologyBtn" type="button">❓ How this works</button>
+      <button id="changeSetupBtn" style="display:none;">⚙ Change setup</button>
+      <button id="refreshBtn" style="display:none;" title="Refetch weather and recalibrate">↻ Refresh</button>
+    </div>
+  </div>
+
+  <div id="methodologyBackdrop" class="modal-backdrop">
+    <div class="modal">
+      <button class="modal-close" id="methodologyCloseBtn" type="button">✕</button>
+      <h2>How the forecast is calculated</h2>
+      <p class="modal-sub">The short version, then the detail.</p>
+
+      <div class="flow">
+        <div class="flow-step"><b>Your history</b>daily kWh you uploaded, matched to that day's radiation</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step"><b>Calibration</b>a regression fitted to your system specifically</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step"><b>Live radiation</b>forecast (16 days) or seasonal estimate (beyond)</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step"><b>Prediction</b>kWh + a confidence range</div>
+      </div>
+
+      <h3>Radiation already bundles seasonality and daytime length</h3>
+      <p>The core input isn't "weather" in a vague sense &mdash; it's a specific daily figure called solar radiation (kWh/m²), sourced from Open-Meteo for your exact coordinates. That single number already combines two very different things: the sun's position and day length for that calendar date (deterministic, no forecasting needed &mdash; astronomy, not meteorology) and the actual cloud cover, humidity and haze on the day (the genuinely uncertain part). So seasonality and daytime length aren't separate inputs to the model; they're baked into the radiation figure before it ever reaches the regression.</p>
+
+      <h3>Calibrating to your system</h3>
+      <p>Your uploaded daily kWh is regressed against that day's radiation across your whole history (ordinary least squares). The resulting slope and intercept aren't generic panel-efficiency numbers &mdash; they're fitted to your system specifically, so they automatically absorb your array size, panel efficiency, orientation and tilt, shading, inverter losses and degradation, without you having to specify any of it.</p>
+
+      <h3>A seasonal correction on top</h3>
+      <p>Radiation from Open-Meteo is measured on a flat horizontal plane, but your panels sit at a fixed tilt, so the relationship between "radiation" and "your output" isn't perfectly constant through the year &mdash; low winter sun, for instance, can hit an angled panel more efficiently than it hits flat ground. The tool checks the regression's leftover error for each calendar month and applies a small correction, shrunk toward zero when a month has few data points so noise doesn't get baked in as a lasting bias.</p>
+
+      <h3>Near-term forecast vs. longer-range estimate</h3>
+      <p>Days 1&ndash;16 use an actual weather forecast (cloud cover and radiation) for your coordinates, run through the calibrated model above. Beyond day 16, no legitimate weather forecast exists that far out &mdash; so the tool switches to a seasonal estimate instead: the average and spread of your own actual production on nearby days of the year from past history, widening the search window until there's enough data to be meaningful. These two modes are always labelled separately in the charts and cards, never blended silently.</p>
+
+      <h3>Confidence ranges</h3>
+      <p>For the near-term forecast, the range comes from the calibration model's typical error, widening slightly the further out the day is, since cloud forecasts get less reliable with lead time. For the longer-range seasonal estimate, the range comes from the actual historical spread on similar days &mdash; a wider, more honest band, since there's no forecast to lean on that far out.</p>
+
+      <h3>What isn't modelled separately</h3>
+      <p>Panel degradation over multiple years, one-off soiling from dust, pollen or snow, heat de-rating on extreme days, and physical changes like new shading from tree growth aren't broken out as their own variables. They show up bundled into the regression's average behaviour and its error term, rather than as explicit inputs.</p>
+
+      <div class="modal-stats" id="modalStats">Run a forecast first to see your own calibration numbers here.</div>
+    </div>
+  </div>
+
+  <div id="setupCard" class="card">
+    <p class="section-label">Set up your forecast</p>
+    <p class="note" style="margin-top:0;">Upload a daily solar production export and tell it where the system is. It calibrates itself to your data and location &mdash; nothing is hardcoded.</p>
+
+    <div class="field">
+      <label for="fileInput">Solar production export (.xlsx)</label>
+      <input type="file" id="fileInput" accept=".xlsx,.xls">
+      <div class="note" id="fileStatus" style="margin-top:8px;">Needs a "Date" column and a solar production/generation kWh column, one row per day.</div>
+    </div>
+
+    <div class="field">
+      <label for="locationInput">Suburb or address</label>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <input type="text" id="locationInput" placeholder="e.g. Thornleigh NSW" style="flex:1; min-width:200px;">
+        <button id="locationSearchBtn">Search</button>
+      </div>
+      <div id="locationResults" style="margin-top:10px;"></div>
+      <div class="note" id="locationStatus" style="margin-top:8px;"></div>
+    </div>
+
+    <div class="field">
+      <label for="systemSizeInput">System size, kW <span style="font-weight:400;">(optional &mdash; only affects the performance-ratio metric)</span></label>
+      <input type="number" id="systemSizeInput" value="7.4" step="0.1" min="0.1" style="width:100px;">
+    </div>
+
+    <button class="primary" id="generateBtn" disabled>Generate forecast</button>
+    <button id="demoBtn" type="button" style="margin-left:8px;">▶ Try a demo (sample data, Sydney)</button>
+  </div>
+
+  <div id="loadingState" class="card state" style="display:none;"><div class="spinner"></div><span id="loadingText">Fetching weather data…</span></div>
+  <div id="errorState" class="card errbox" style="display:none;"></div>
+
+  <div id="appContent" style="display:none;">
+
+    <div class="card">
+      <p class="section-label">Model calibration</p>
+      <div class="metrics">
+        <div class="metric"><div class="num" id="mR2">–</div><div class="lbl">Fit (R²)</div></div>
+        <div class="metric"><div class="num" id="mRmse">–</div><div class="lbl">Typical error (±kWh/day)</div></div>
+        <div class="metric"><div class="num" id="mDays">–</div><div class="lbl">Days used to calibrate</div></div>
+        <div class="metric"><div class="num" id="mPr">–</div><div class="lbl">System performance ratio</div></div>
+      </div>
+      <p class="note" id="fitNote"></p>
+    </div>
+
+    <div class="card">
+      <p class="section-label">Daily forecast</p>
+      <div class="days" id="dayCards"></div>
+      <div class="toggle-row"><button id="toggleDays">Show 16-day outlook</button></div>
+    </div>
+
+    <div class="card">
+      <p class="section-label">Estimate for any 7-day window</p>
+      <div class="range-pick-row">
+        <label for="datePick">Start date</label>
+        <input type="date" id="datePick">
+        <span class="note" id="rangeHorizonNote" style="margin:0;"></span>
+      </div>
+      <div class="days" id="rangeCards"></div>
+      <div class="metrics" style="margin-top:14px;">
+        <div class="metric"><div class="num" id="rangeTotal">–</div><div class="lbl">7-day total (kWh)</div></div>
+        <div class="metric"><div class="num" id="rangeAvg">–</div><div class="lbl">Avg per day (kWh)</div></div>
+      </div>
+      <p class="note" id="rangeNote"></p>
+    </div>
+
+    <div class="card">
+      <div class="chart-head">
+        <p class="section-label" id="chartTitle" style="margin:0;">Actual vs modelled</p>
+        <div class="seg" id="viewSeg">
+          <button data-view="daily" class="active">Daily</button>
+          <button data-view="monthly">Monthly</button>
+          <button data-view="yearly">Yearly</button>
+        </div>
+      </div>
+      <div class="nav-row" id="navRow">
+        <button id="prevBtn" aria-label="Previous month">◀</button>
+        <span class="navlabel" id="navLabel">–</span>
+        <button id="nextBtn" aria-label="Next month">▶</button>
+      </div>
+      <div class="legend" id="chartLegend"></div>
+      <div class="chart-wrap"><canvas id="mainChart" role="img" aria-label="Chart of daily, monthly or yearly solar production, actual against modelled and forecast"></canvas></div>
+      <p class="note" id="chartNote"></p>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <p class="section-label">Calibration: radiation vs actual output</p>
+        <div class="chart-wrap small"><canvas id="scatterChart" role="img" aria-label="Scatter plot of daily solar radiation against actual production with a fitted regression line"></canvas></div>
+      </div>
+      <div class="card">
+        <p class="section-label">How this works</p>
+        <p class="note">
+          Each day's cloud-affected solar radiation forecast for Thornleigh is run through a regression fitted to your actual generation history, so it reflects your panel efficiency, orientation, shading and inverter losses &mdash; not a generic estimate. A monthly correction adjusts for sun-angle effects the radiation figure alone doesn't fully capture.
+        </p>
+        <p class="note">Confidence narrows for tomorrow and widens further out, since cloud forecasts get less reliable beyond about a week.</p>
+      </div>
+    </div>
+
+    <p class="footer" id="footerNote"></p>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+let HISTORICAL = [];
+let LAT=null, LON=null, TZ='UTC', SYSTEM_KW=7.4, LOCATION_LABEL='';
+const MJ_TO_KWH = 0.277778;
+const FORECAST_LOOKAHEAD_DAYS = 90;
+let currentTodayStr = null;
+
+const DEMO_HISTORICAL = [{"date":"2025-09-26","kwh":31.89},{"date":"2025-09-27","kwh":25.22},{"date":"2025-09-28","kwh":34.12},{"date":"2025-09-29","kwh":25.23},{"date":"2025-09-30","kwh":32.98},{"date":"2025-10-01","kwh":34.32},{"date":"2025-10-02","kwh":34.39},{"date":"2025-10-03","kwh":35.07},{"date":"2025-10-04","kwh":33.36},{"date":"2025-10-05","kwh":36.82},{"date":"2025-10-06","kwh":23.81},{"date":"2025-10-07","kwh":17.54},{"date":"2025-10-08","kwh":34.09},{"date":"2025-10-09","kwh":8.78},{"date":"2025-10-10","kwh":33.06},{"date":"2025-10-11","kwh":17.99},{"date":"2025-10-12","kwh":26.82},{"date":"2025-10-13","kwh":34.73},{"date":"2025-10-14","kwh":37.03},{"date":"2025-10-15","kwh":36.24},{"date":"2025-10-16","kwh":29.45},{"date":"2025-10-17","kwh":19.74},{"date":"2025-10-18","kwh":31.0},{"date":"2025-10-19","kwh":35.95},{"date":"2025-10-20","kwh":33.36},{"date":"2025-10-21","kwh":32.71},{"date":"2025-10-22","kwh":30.13},{"date":"2025-10-23","kwh":35.59},{"date":"2025-10-24","kwh":35.71},{"date":"2025-10-25","kwh":31.92},{"date":"2025-10-26","kwh":15.08},{"date":"2025-10-27","kwh":22.29},{"date":"2025-10-28","kwh":11.1},{"date":"2025-10-29","kwh":11.29},{"date":"2025-10-30","kwh":23.44},{"date":"2025-10-31","kwh":34.06},{"date":"2025-11-01","kwh":13.68},{"date":"2025-11-02","kwh":17.62},{"date":"2025-11-03","kwh":30.43},{"date":"2025-11-04","kwh":33.47},{"date":"2025-11-05","kwh":38.63},{"date":"2025-11-06","kwh":23.21},{"date":"2025-11-07","kwh":22.09},{"date":"2025-11-08","kwh":16.61},{"date":"2025-11-09","kwh":23.16},{"date":"2025-11-10","kwh":20.02},{"date":"2025-11-11","kwh":16.69},{"date":"2025-11-12","kwh":18.62},{"date":"2025-11-13","kwh":35.51},{"date":"2025-11-14","kwh":39.36},{"date":"2025-11-15","kwh":21.29},{"date":"2025-11-16","kwh":38.53},{"date":"2025-11-17","kwh":30.01},{"date":"2025-11-18","kwh":20.79},{"date":"2025-11-19","kwh":35.26},{"date":"2025-11-20","kwh":29.87},{"date":"2025-11-21","kwh":7.29},{"date":"2025-11-22","kwh":11.23},{"date":"2025-11-23","kwh":36.39},{"date":"2025-11-24","kwh":37.9},{"date":"2025-11-25","kwh":37.19},{"date":"2025-11-26","kwh":35.12},{"date":"2025-11-27","kwh":27.55},{"date":"2025-11-28","kwh":41.71},{"date":"2025-11-29","kwh":28.87},{"date":"2025-11-30","kwh":35.56},{"date":"2025-12-01","kwh":33.03},{"date":"2025-12-02","kwh":40.92},{"date":"2025-12-03","kwh":39.19},{"date":"2025-12-04","kwh":39.15},{"date":"2025-12-05","kwh":43.41},{"date":"2025-12-06","kwh":32.99},{"date":"2025-12-07","kwh":18.82},{"date":"2025-12-08","kwh":31.94},{"date":"2025-12-09","kwh":32.67},{"date":"2025-12-10","kwh":29.65},{"date":"2025-12-11","kwh":21.35},{"date":"2025-12-12","kwh":12.05},{"date":"2025-12-13","kwh":27.82},{"date":"2025-12-14","kwh":38.17},{"date":"2025-12-15","kwh":33.26},{"date":"2025-12-16","kwh":14.11},{"date":"2025-12-17","kwh":36.73},{"date":"2025-12-18","kwh":35.62},{"date":"2025-12-19","kwh":33.56},{"date":"2025-12-20","kwh":25.32},{"date":"2025-12-21","kwh":35.05},{"date":"2025-12-22","kwh":25.81},{"date":"2025-12-23","kwh":44.54},{"date":"2025-12-24","kwh":46.61},{"date":"2025-12-25","kwh":30.82},{"date":"2025-12-26","kwh":13.12},{"date":"2025-12-27","kwh":40.26},{"date":"2025-12-28","kwh":34.54},{"date":"2025-12-29","kwh":31.18},{"date":"2025-12-30","kwh":18.49},{"date":"2025-12-31","kwh":22.46},{"date":"2026-01-01","kwh":10.58},{"date":"2026-01-02","kwh":20.82},{"date":"2026-01-03","kwh":34.16},{"date":"2026-01-04","kwh":33.96},{"date":"2026-01-05","kwh":38.14},{"date":"2026-01-06","kwh":37.32},{"date":"2026-01-07","kwh":46.07},{"date":"2026-01-08","kwh":45.65},{"date":"2026-01-09","kwh":45.79},{"date":"2026-01-10","kwh":45.92},{"date":"2026-01-11","kwh":4.16},{"date":"2026-01-12","kwh":13.09},{"date":"2026-01-13","kwh":33.8},{"date":"2026-01-14","kwh":30.59},{"date":"2026-01-15","kwh":25.27},{"date":"2026-01-16","kwh":22.4},{"date":"2026-01-17","kwh":16.14},{"date":"2026-01-18","kwh":12.12},{"date":"2026-01-19","kwh":25.95},{"date":"2026-01-20","kwh":26.71},{"date":"2026-01-21","kwh":38.26},{"date":"2026-01-22","kwh":28.17},{"date":"2026-01-23","kwh":31.76},{"date":"2026-01-24","kwh":42.85},{"date":"2026-01-25","kwh":44.27},{"date":"2026-01-26","kwh":19.8},{"date":"2026-01-27","kwh":36.62},{"date":"2026-01-28","kwh":39.43},{"date":"2026-01-29","kwh":38.84},{"date":"2026-01-30","kwh":42.57},{"date":"2026-01-31","kwh":42.28},{"date":"2026-02-01","kwh":21.92},{"date":"2026-02-02","kwh":38.19},{"date":"2026-02-03","kwh":21.36},{"date":"2026-02-04","kwh":43.69},{"date":"2026-02-05","kwh":40.93},{"date":"2026-02-06","kwh":28.31},{"date":"2026-02-07","kwh":39.14},{"date":"2026-02-08","kwh":6.48},{"date":"2026-02-09","kwh":19.22},{"date":"2026-02-10","kwh":35.94},{"date":"2026-02-11","kwh":39.06},{"date":"2026-02-12","kwh":13.79},{"date":"2026-02-13","kwh":9.96},{"date":"2026-02-14","kwh":22.23},{"date":"2026-02-15","kwh":24.02},{"date":"2026-02-16","kwh":36.88},{"date":"2026-02-17","kwh":40.7},{"date":"2026-02-18","kwh":34.6},{"date":"2026-02-19","kwh":25.54},{"date":"2026-02-20","kwh":15.22},{"date":"2026-02-21","kwh":30.67},{"date":"2026-02-22","kwh":31.49},{"date":"2026-02-23","kwh":20.75},{"date":"2026-02-24","kwh":36.04},{"date":"2026-02-25","kwh":27.36},{"date":"2026-02-26","kwh":18.73},{"date":"2026-02-27","kwh":10.48},{"date":"2026-02-28","kwh":26.6},{"date":"2026-03-01","kwh":19.07},{"date":"2026-03-02","kwh":22.49},{"date":"2026-03-03","kwh":18.5},{"date":"2026-03-04","kwh":21.36},{"date":"2026-03-05","kwh":24.51},{"date":"2026-03-06","kwh":35.14},{"date":"2026-03-07","kwh":25.24},{"date":"2026-03-08","kwh":9.52},{"date":"2026-03-09","kwh":16.32},{"date":"2026-03-10","kwh":20.72},{"date":"2026-03-11","kwh":34.55},{"date":"2026-03-12","kwh":35.0},{"date":"2026-03-13","kwh":29.78},{"date":"2026-03-14","kwh":29.77},{"date":"2026-03-15","kwh":36.15},{"date":"2026-03-16","kwh":31.24},{"date":"2026-03-17","kwh":20.48},{"date":"2026-03-18","kwh":15.4},{"date":"2026-03-19","kwh":12.28},{"date":"2026-03-20","kwh":22.46},{"date":"2026-03-21","kwh":21.6},{"date":"2026-03-22","kwh":26.86},{"date":"2026-03-23","kwh":25.04},{"date":"2026-03-24","kwh":28.82},{"date":"2026-03-25","kwh":28.49},{"date":"2026-03-26","kwh":25.16},{"date":"2026-03-27","kwh":16.8},{"date":"2026-03-28","kwh":22.5},{"date":"2026-03-29","kwh":18.14},{"date":"2026-03-30","kwh":21.15},{"date":"2026-03-31","kwh":28.98},{"date":"2026-04-01","kwh":30.06},{"date":"2026-04-02","kwh":27.81},{"date":"2026-04-03","kwh":20.85},{"date":"2026-04-04","kwh":9.12},{"date":"2026-04-05","kwh":22.23},{"date":"2026-04-06","kwh":14.9},{"date":"2026-04-07","kwh":28.16},{"date":"2026-04-08","kwh":29.8},{"date":"2026-04-09","kwh":28.53},{"date":"2026-04-10","kwh":20.54},{"date":"2026-04-11","kwh":30.17},{"date":"2026-04-12","kwh":30.23},{"date":"2026-04-13","kwh":29.43},{"date":"2026-04-14","kwh":29.35},{"date":"2026-04-15","kwh":28.76},{"date":"2026-04-16","kwh":26.77},{"date":"2026-04-17","kwh":25.41},{"date":"2026-04-18","kwh":29.32},{"date":"2026-04-19","kwh":28.42},{"date":"2026-04-20","kwh":24.81},{"date":"2026-04-21","kwh":13.16},{"date":"2026-04-22","kwh":21.12},{"date":"2026-04-23","kwh":18.62},{"date":"2026-04-24","kwh":22.8},{"date":"2026-04-25","kwh":20.17},{"date":"2026-04-26","kwh":28.08},{"date":"2026-04-27","kwh":21.77},{"date":"2026-04-28","kwh":28.58},{"date":"2026-04-29","kwh":22.82},{"date":"2026-04-30","kwh":24.57},{"date":"2026-05-01","kwh":16.49},{"date":"2026-05-02","kwh":19.45},{"date":"2026-05-03","kwh":24.62},{"date":"2026-05-04","kwh":7.63},{"date":"2026-05-05","kwh":25.45},{"date":"2026-05-06","kwh":21.12},{"date":"2026-05-07","kwh":23.85},{"date":"2026-05-08","kwh":23.22},{"date":"2026-05-09","kwh":24.01},{"date":"2026-05-10","kwh":22.22},{"date":"2026-05-11","kwh":18.74},{"date":"2026-05-12","kwh":10.21},{"date":"2026-05-13","kwh":13.2},{"date":"2026-05-14","kwh":16.82},{"date":"2026-05-15","kwh":13.39},{"date":"2026-05-16","kwh":14.48},{"date":"2026-05-17","kwh":8.83},{"date":"2026-05-18","kwh":6.73},{"date":"2026-05-19","kwh":12.22},{"date":"2026-05-20","kwh":20.81},{"date":"2026-05-21","kwh":22.37},{"date":"2026-05-22","kwh":8.9},{"date":"2026-05-23","kwh":10.77},{"date":"2026-05-24","kwh":10.72},{"date":"2026-05-25","kwh":8.15},{"date":"2026-05-26","kwh":6.2},{"date":"2026-05-27","kwh":16.17},{"date":"2026-05-28","kwh":6.69},{"date":"2026-05-29","kwh":8.48},{"date":"2026-05-30","kwh":19.5},{"date":"2026-05-31","kwh":20.43},{"date":"2026-06-01","kwh":19.5},{"date":"2026-06-02","kwh":5.92},{"date":"2026-06-03","kwh":17.73},{"date":"2026-06-04","kwh":15.11},{"date":"2026-06-05","kwh":18.53},{"date":"2026-06-06","kwh":19.96},{"date":"2026-06-07","kwh":19.56},{"date":"2026-06-08","kwh":15.31},{"date":"2026-06-09","kwh":18.88},{"date":"2026-06-10","kwh":18.3},{"date":"2026-06-11","kwh":7.83},{"date":"2026-06-12","kwh":10.07},{"date":"2026-06-13","kwh":18.52},{"date":"2026-06-14","kwh":7.81},{"date":"2026-06-15","kwh":11.08},{"date":"2026-06-16","kwh":18.7},{"date":"2026-06-17","kwh":9.13},{"date":"2026-06-18","kwh":13.24},{"date":"2026-06-19","kwh":10.71},{"date":"2026-06-20","kwh":18.63},{"date":"2026-06-21","kwh":19.5},{"date":"2026-06-22","kwh":19.54},{"date":"2026-06-23","kwh":17.99},{"date":"2026-06-24","kwh":19.2},{"date":"2026-06-25","kwh":5.35},{"date":"2026-06-26","kwh":8.27},{"date":"2026-06-27","kwh":10.44},{"date":"2026-06-28","kwh":10.43},{"date":"2026-06-29","kwh":12.44},{"date":"2026-06-30","kwh":9.72},{"date":"2026-07-01","kwh":13.26},{"date":"2026-07-02","kwh":19.97},{"date":"2026-07-03","kwh":18.35},{"date":"2026-07-04","kwh":17.63},{"date":"2026-07-05","kwh":12.89},{"date":"2026-07-06","kwh":9.42},{"date":"2026-07-07","kwh":8.73},{"date":"2026-07-08","kwh":13.23},{"date":"2026-07-09","kwh":14.29},{"date":"2026-07-10","kwh":16.03},{"date":"2026-07-11","kwh":18.54},{"date":"2026-07-12","kwh":22.18},{"date":"2026-07-13","kwh":20.19}];
+const DEMO_LOCATION = { lat:-33.8688, lon:151.2093, tz:'Australia/Sydney', label:'Sydney, New South Wales, Australia' };
+const DEMO_SYSTEM_KW = 7.4;
+
+function fmtDate(d){ return d.toISOString().slice(0,10); }
+function addDays(dateStr, n){ const d = new Date(dateStr + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate()+n); return fmtDate(d); }
+function todayInLocationTz(){
+  return new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year:'numeric', month:'2-digit', day:'2-digit' }).format(new Date());
+}
+function weekday(dateStr){ return new Date(dateStr+'T00:00:00').toLocaleDateString('en-AU',{weekday:'short'}); }
+function shortDate(dateStr){ return new Date(dateStr+'T00:00:00').toLocaleDateString('en-AU',{day:'numeric',month:'short'}); }
+function monthOf(dateStr){ return parseInt(dateStr.slice(5,7),10)-1; }
+
+async function fetchJSON(url){
+  const res = await fetch(url);
+  if(!res.ok) throw new Error('Weather request failed (' + res.status + ')');
+  return res.json();
+}
+
+function dailyToMap(daily){
+  const map = {};
+  if(!daily || !daily.time) return map;
+  daily.time.forEach((date,i)=>{
+    map[date] = {
+      radMJ: daily.shortwave_radiation_sum ? daily.shortwave_radiation_sum[i] : null,
+      cloud: daily.cloud_cover_mean ? daily.cloud_cover_mean[i] : null,
+      tmax: daily.temperature_2m_max ? daily.temperature_2m_max[i] : null,
+      precip: daily.precipitation_sum ? daily.precipitation_sum[i] : null,
+    };
+  });
+  return map;
+}
+
+async function fetchWeather(){
+  const today = todayInLocationTz();
+  const archiveEnd = addDays(today, -8);
+  const minHistDate = HISTORICAL[0].date;
+
+  const archiveUrl = `https://archive-api.open-meteo.com/v1/archive?latitude=${LAT}&longitude=${LON}` +
+    `&start_date=${minHistDate}&end_date=${archiveEnd}` +
+    `&daily=shortwave_radiation_sum,cloud_cover_mean,temperature_2m_max,precipitation_sum&timezone=${encodeURIComponent(TZ)}`;
+
+  const forecastUrl = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}` +
+    `&daily=shortwave_radiation_sum,cloud_cover_mean,temperature_2m_max,precipitation_sum&past_days=14&forecast_days=16` +
+    `&timezone=${encodeURIComponent(TZ)}`;
+
+  const [archive, forecast] = await Promise.all([fetchJSON(archiveUrl), fetchJSON(forecastUrl)]);
+  const merged = Object.assign({}, dailyToMap(archive.daily), dailyToMap(forecast.daily));
+  return { merged, todayStr: today, forecastDaily: forecast.daily };
+}
+
+function fitModel(trainingRows){
+  const n = trainingRows.length;
+  let sx=0, sy=0, sxy=0, sxx=0;
+  trainingRows.forEach(r=>{ sx+=r.rad; sy+=r.kwh; sxy+=r.rad*r.kwh; sxx+=r.rad*r.rad; });
+  const slope = (n*sxy - sx*sy) / (n*sxx - sx*sx);
+  const intercept = (sy - slope*sx) / n;
+
+  let ssRes=0, ssTot=0;
+  const meanY = sy/n;
+  trainingRows.forEach(r=>{
+    const pred = intercept + slope*r.rad;
+    ssRes += (r.kwh-pred)*(r.kwh-pred);
+    ssTot += (r.kwh-meanY)*(r.kwh-meanY);
+  });
+  const r2 = 1 - ssRes/ssTot;
+  const rmse = Math.sqrt(ssRes/n);
+
+  const byMonth = {};
+  trainingRows.forEach(r=>{
+    const m = monthOf(r.date);
+    const pred = intercept + slope*r.rad;
+    if(!byMonth[m]) byMonth[m] = [];
+    byMonth[m].push(r.kwh - pred);
+  });
+  const monthlyCorrection = {};
+  Object.keys(byMonth).forEach(m=>{
+    const arr = byMonth[m];
+    const mean = arr.reduce((a,b)=>a+b,0)/arr.length;
+    const shrink = arr.length/(arr.length+5);
+    monthlyCorrection[m] = mean*shrink;
+  });
+
+  const avgRadKwhm2 = sx/n;
+  const performanceRatio = meanY / (avgRadKwhm2 * SYSTEM_KW);
+
+  return { slope, intercept, r2, rmse, monthlyCorrection, performanceRatio, n };
+}
+
+function predictKwh(model, radKwhm2, dateStr){
+  const raw = model.intercept + model.slope*radKwhm2;
+  const corr = model.monthlyCorrection[monthOf(dateStr)] || 0;
+  return Math.max(0, raw + corr);
+}
+
+function cloudLabel(cloud){
+  if(cloud==null) return '–';
+  if(cloud<20) return 'Clear';
+  if(cloud<50) return 'Mostly sunny';
+  if(cloud<80) return 'Partly cloudy';
+  return 'Overcast';
+}
+
+function sunCloudIcon(cloud){
+  const c = cloud==null ? 40 : cloud;
+  const cloudOpacity = Math.min(0.95, 0.15 + c/100*0.8);
+  const sunR = 11 - (c/100)*3;
+  return `<svg width="44" height="36" viewBox="0 0 44 36">
+    <circle cx="22" cy="16" r="${sunR}" fill="var(--amber)"></circle>
+    <ellipse cx="26" cy="24" rx="15" ry="9" fill="var(--sky)" opacity="${cloudOpacity}"></ellipse>
+  </svg>`;
+}
+
+function confidenceTier(leadDays){
+  if(leadDays<=2) return {cls:'high', label:'High confidence'};
+  if(leadDays<=6) return {cls:'med', label:'Medium confidence'};
+  return {cls:'low', label:'Outlook'};
+}
+
+function sourceTier(row){
+  if(row.source==='climatology') return {cls:'low', label:'Seasonal estimate'};
+  return confidenceTier(row.leadDays);
+}
+
+function dayOfYear(dateStr){
+  const d = new Date(dateStr+'T00:00:00Z');
+  const start = Date.UTC(d.getUTCFullYear(),0,1);
+  return Math.floor((d.getTime()-start)/86400000)+1;
+}
+function circularDoyDistance(a,b){
+  const diff = Math.abs(a-b);
+  return Math.min(diff, 365-diff);
+}
+
+// For dates beyond the real weather forecast horizon, estimate from your own
+// historical days near the same point in the year (widening the window until
+// there's a reasonable sample), rather than pretending to forecast cloud cover
+// two months out.
+function climatologyEstimate(targetDateStr){
+  const targetDoy = dayOfYear(targetDateStr);
+  const windows = [10,20,30,45,60];
+  for(const w of windows){
+    const matches = allHistoryRows.filter(r=>circularDoyDistance(dayOfYear(r.date), targetDoy) <= w);
+    if(matches.length>=6 || w===windows[windows.length-1]){
+      const mean = matches.reduce((a,r)=>a+r.kwh,0)/matches.length;
+      const variance = matches.reduce((a,r)=>a+(r.kwh-mean)*(r.kwh-mean),0)/Math.max(1,matches.length-1);
+      const cloudVals = matches.filter(r=>r.cloud!=null).map(r=>r.cloud);
+      const avgCloud = cloudVals.length ? cloudVals.reduce((a,b)=>a+b,0)/cloudVals.length : null;
+      return { mean, std:Math.sqrt(variance), n:matches.length, windowDays:w, avgCloud };
+    }
+  }
+}
+
+let showAll16 = false;
+let lastForecastRows = [];
+
+function renderDayCards(){
+  const el = document.getElementById('dayCards');
+  const rows = showAll16 ? lastForecastRows : lastForecastRows.slice(0,7);
+  el.innerHTML = rows.map((r,i)=>{
+    const tier = sourceTier(r);
+    return `<div class="day ${i===0?'today':''}">
+      <div class="wd">${i===0?'Today':weekday(r.date)}</div>
+      <div class="dt">${shortDate(r.date)}</div>
+      ${sunCloudIcon(r.cloud)}
+      <div class="kwh">${r.pred.toFixed(1)}</div>
+      <div class="rng">±${r.band.toFixed(1)} kWh</div>
+      <div class="cc">${cloudLabel(r.cloud)} · ${r.cloud!=null?Math.round(r.cloud):'–'}% cloud</div>
+      <span class="pill ${tier.cls}">${tier.label}</span>
+    </div>`;
+  }).join('');
+}
+
+document.getElementById('toggleDays').addEventListener('click', ()=>{
+  showAll16 = !showAll16;
+  document.getElementById('toggleDays').textContent = showAll16 ? 'Show 7-day forecast' : 'Show 16-day outlook';
+  renderDayCards();
+});
+
+function renderRangeEstimate(startDateStr){
+  const rows = [];
+  for(let i=0;i<7;i++){
+    const date = addDays(startDateStr, i);
+    rows.push(allForecastRows.find(r=>r.date===date) || null);
+  }
+
+  document.getElementById('rangeCards').innerHTML = rows.map((r,i)=>{
+    const date = addDays(startDateStr, i);
+    if(!r) return `<div class="day"><div class="wd">${weekday(date)}</div><div class="dt">${shortDate(date)}</div><div class="kwh">–</div></div>`;
+    const cloudTxt = r.source==='climatology'
+      ? `${cloudLabel(r.cloud)} · ~${r.cloud!=null?Math.round(r.cloud):'–'}% avg cloud`
+      : `${cloudLabel(r.cloud)} · ${r.cloud!=null?Math.round(r.cloud):'–'}% cloud`;
+    return `<div class="day">
+      <div class="wd">${weekday(r.date)}</div>
+      <div class="dt">${shortDate(r.date)}</div>
+      ${sunCloudIcon(r.cloud)}
+      <div class="kwh">${r.pred.toFixed(1)}</div>
+      <div class="rng">±${r.band.toFixed(1)} kWh</div>
+      <div class="cc">${cloudTxt}</div>
+      <span class="src-tag ${r.source}">${r.source==='forecast'?'Forecast':'Seasonal'}</span>
+    </div>`;
+  }).join('');
+
+  const valid = rows.filter(Boolean);
+  const total = valid.reduce((a,r)=>a+r.pred,0);
+  const avg = valid.length ? total/valid.length : 0;
+  const bandTotal = Math.sqrt(valid.reduce((a,r)=>a+r.band*r.band,0));
+  document.getElementById('rangeTotal').textContent = valid.length ? `${total.toFixed(0)} ±${bandTotal.toFixed(0)}` : '–';
+  document.getElementById('rangeAvg').textContent = valid.length ? avg.toFixed(1) : '–';
+
+  const hasForecast = valid.some(r=>r.source==='forecast');
+  const hasClim = valid.some(r=>r.source==='climatology');
+  let note;
+  if(hasForecast && !hasClim) note = 'All 7 days fall within the live 16-day weather forecast.';
+  else if(hasClim && !hasForecast) note = 'Beyond the 16-day weather forecast horizon, so these days are seasonal estimates built from your own history around this time of year \u2014 not a cloud cover prediction, just what\u2019s typical.';
+  else note = 'The earlier days use the live weather forecast; later days in this window shift to a seasonal estimate once the forecast horizon runs out.';
+  document.getElementById('rangeNote').textContent = note;
+}
+
+document.getElementById('datePick').addEventListener('change', (e)=>{
+  if(e.target.value) renderRangeEstimate(e.target.value);
+});
+
+let mainChartRef=null, scatterChartRef=null;
+let allHistoryRows=[], allForecastRows=[];
+let currentView='daily';
+let dailyMonthKeys=[], dailyMonthIndex=0;
+
+function monthKeyOf(dateStr){ return dateStr.slice(0,7); }
+function yearOf(dateStr){ return dateStr.slice(0,4); }
+function monthLabelFull(monthKey){
+  const [y,m] = monthKey.split('-').map(Number);
+  return new Date(y, m-1, 1).toLocaleDateString('en-AU',{month:'long', year:'numeric'});
+}
+function monthShortName(m){ return new Date(2000, m-1, 1).toLocaleDateString('en-AU',{month:'short'}); }
+
+const SERIES_COLORS = { actual:'#D98C1C', modelled:'#2E6FA3', forecast:'#2E6FA3', band:'rgba(143,185,218,0.28)' };
+const YEAR_COLORS = ['#2E6FA3','#D98C1C','#1F8064','#8A5A9E'];
+
+function setLegend(items){
+  document.getElementById('chartLegend').innerHTML = items.map(it=>
+    `<span><span class="sw" style="background:${it.color};"></span>${it.label}</span>`
+  ).join('');
+}
+
+function renderMainView(){
+  document.getElementById('navRow').style.display = currentView==='daily' ? 'flex' : 'none';
+  if(currentView==='daily') renderDailyView();
+  else if(currentView==='monthly') renderMonthlyView();
+  else renderYearlyView();
+}
+
+function renderDailyView(){
+  const monthKey = dailyMonthKeys[dailyMonthIndex];
+  document.getElementById('navLabel').textContent = monthKey ? monthLabelFull(monthKey) : '–';
+  document.getElementById('prevBtn').disabled = dailyMonthIndex<=0;
+  document.getElementById('nextBtn').disabled = dailyMonthIndex>=dailyMonthKeys.length-1;
+  document.getElementById('chartTitle').textContent = 'Actual vs modelled';
+
+  const histSub = allHistoryRows.filter(r=>monthKeyOf(r.date)===monthKey);
+  const foreSub = allForecastRows.filter(r=>monthKeyOf(r.date)===monthKey);
+
+  const labels = histSub.map(r=>shortDate(r.date)).concat(foreSub.map(r=>shortDate(r.date)));
+  const actualData = histSub.map(r=>r.kwh).concat(foreSub.map(()=>null));
+  const modelData = histSub.map(r=>r.modelled).concat(foreSub.map(()=>null));
+  const forecastData = histSub.map(()=>null).concat(foreSub.map(r=>r.source==='forecast'?r.pred:null));
+  const climData = histSub.map(()=>null).concat(foreSub.map(r=>r.source==='climatology'?r.pred:null));
+  const bandLow = histSub.map(()=>null).concat(foreSub.map(r=>Math.max(0,r.pred-r.band)));
+  const bandHigh = histSub.map(()=>null).concat(foreSub.map(r=>r.pred+r.band));
+
+  const hasForecast = foreSub.some(r=>r.source==='forecast');
+  const hasClim = foreSub.some(r=>r.source==='climatology');
+  setLegend([
+    {color:SERIES_COLORS.actual, label:'Actual production'},
+    {color:SERIES_COLORS.modelled, label:'Model fit'},
+  ].concat(hasForecast ? [{color:'#8FB9DA', label:'Weather forecast (shaded = confidence)'}] : [])
+   .concat(hasClim ? [{color:'#9AA6B2', label:'Seasonal estimate (shaded = typical range)'}] : []));
+
+  if(mainChartRef) mainChartRef.destroy();
+  mainChartRef = new Chart(document.getElementById('mainChart'), {
+    type:'line',
+    data:{ labels, datasets:[
+      { label:'Confidence band', data:bandHigh, borderWidth:0, backgroundColor:SERIES_COLORS.band, fill:'+1', pointRadius:0, tension:0.25, order:4 },
+      { label:'_low', data:bandLow, borderWidth:0, backgroundColor:SERIES_COLORS.band, pointRadius:0, tension:0.25, order:4 },
+      { label:'Seasonal estimate', data:climData, borderColor:'#9AA6B2', borderDash:[2,3], backgroundColor:'#9AA6B2', pointRadius:2, tension:0.25, order:3 },
+      { label:'Forecast', data:forecastData, borderColor:SERIES_COLORS.forecast, borderDash:[5,3], backgroundColor:SERIES_COLORS.forecast, pointRadius:2, tension:0.25, order:3 },
+      { label:'Model fit', data:modelData, borderColor:SERIES_COLORS.modelled, backgroundColor:SERIES_COLORS.modelled, pointRadius:0, borderWidth:1.5, tension:0.25, order:2 },
+      { label:'Actual', data:actualData, borderColor:SERIES_COLORS.actual, backgroundColor:SERIES_COLORS.actual, pointRadius:2, borderWidth:2, tension:0.25, order:1 },
+    ]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ filter:(item)=>item.dataset.label!=='_low' && item.dataset.label!=='Confidence band' } },
+      scales:{ y:{ beginAtZero:true, title:{display:true,text:'kWh'} }, x:{ ticks:{ autoSkip:true, maxTicksLimit:12 } } }
+    }
+  });
+
+  const histTotal = histSub.reduce((a,r)=>a+r.kwh,0);
+  let trailNote = '.';
+  if(hasForecast && !hasClim) trailNote = ' — weather forecast continues to the right.';
+  else if(hasClim && !hasForecast) trailNote = ' — beyond the 16-day forecast, shown as a seasonal estimate from past years.';
+  else if(hasForecast && hasClim) trailNote = ' — weather forecast continues, then shifts to a seasonal estimate later in the month.';
+  document.getElementById('chartNote').textContent = histSub.length
+    ? `${histSub.length} day${histSub.length===1?'':'s'} of actual data this month, ${histTotal.toFixed(0)} kWh so far${trailNote}`
+    : (hasForecast ? 'No actual data yet this month — shown from the weather forecast.' : 'No actual data yet this month — shown as a seasonal estimate from past years.');
+}
+
+function aggregateMonthly(){
+  const map = {};
+  allHistoryRows.forEach(r=>{
+    const k = monthKeyOf(r.date);
+    if(!map[k]) map[k] = {key:k, actual:0, modelled:0, days:0};
+    map[k].actual += r.kwh; map[k].modelled += r.modelled; map[k].days += 1;
+  });
+  return Object.values(map).sort((a,b)=>a.key.localeCompare(b.key));
+}
+
+function renderMonthlyView(){
+  document.getElementById('chartTitle').textContent = 'Monthly totals';
+  const agg = aggregateMonthly();
+  const shortLabels = agg.map(m=>{
+    const [y,mo] = m.key.split('-');
+    return monthShortName(parseInt(mo,10)) + ' \u2019' + y.slice(2);
+  });
+  setLegend([
+    {color:SERIES_COLORS.actual, label:'Actual'},
+    {color:SERIES_COLORS.modelled, label:'Model fit'},
+  ]);
+  if(mainChartRef) mainChartRef.destroy();
+  mainChartRef = new Chart(document.getElementById('mainChart'), {
+    type:'bar',
+    data:{ labels:shortLabels, datasets:[
+      { label:'Actual', data:agg.map(m=>+m.actual.toFixed(1)), backgroundColor:SERIES_COLORS.actual, borderRadius:3 },
+      { label:'Model fit', data:agg.map(m=>+m.modelled.toFixed(1)), backgroundColor:SERIES_COLORS.modelled, borderRadius:3 },
+    ]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false} },
+      scales:{ y:{ beginAtZero:true, title:{display:true,text:'kWh'} } }
+    }
+  });
+  const partial = agg[agg.length-1];
+  const daysInMonth = partial ? new Date(parseInt(partial.key.slice(0,4),10), parseInt(partial.key.slice(5,7),10), 0).getDate() : 0;
+  document.getElementById('chartNote').textContent = (partial && partial.days<daysInMonth)
+    ? `${monthLabelFull(partial.key)} is still in progress (${partial.days} of ${daysInMonth} days so far) \u2014 its bar will keep growing.`
+    : 'Full calendar months only.';
+}
+
+function aggregateYearlySeasonal(){
+  const years = {};
+  allHistoryRows.forEach(r=>{
+    const y = yearOf(r.date);
+    const m = parseInt(r.date.slice(5,7),10);
+    if(!years[y]) years[y] = Array.from({length:12}, ()=>({sum:0, days:0}));
+    years[y][m-1].sum += r.kwh;
+    years[y][m-1].days += 1;
+  });
+  return years;
+}
+
+function renderYearlyView(){
+  document.getElementById('chartTitle').textContent = 'Seasonal comparison';
+  const years = aggregateYearlySeasonal();
+  const yearKeys = Object.keys(years).sort();
+  const labels = Array.from({length:12},(_,i)=>monthShortName(i+1));
+
+  const datasets = yearKeys.map((y,idx)=>({
+    label:y,
+    data:years[y].map(m=>m.days>0 ? +(m.sum/m.days).toFixed(2) : null),
+    borderColor:YEAR_COLORS[idx%YEAR_COLORS.length],
+    backgroundColor:YEAR_COLORS[idx%YEAR_COLORS.length],
+    spanGaps:true, tension:0.25, pointRadius:3, borderWidth:2,
+  }));
+
+  setLegend(yearKeys.map((y,idx)=>({color:YEAR_COLORS[idx%YEAR_COLORS.length], label:y})));
+
+  if(mainChartRef) mainChartRef.destroy();
+  mainChartRef = new Chart(document.getElementById('mainChart'), {
+    type:'line',
+    data:{ labels, datasets },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false} },
+      scales:{ y:{ beginAtZero:true, title:{display:true,text:'Avg kWh/day'} } }
+    }
+  });
+  document.getElementById('chartNote').textContent = yearKeys.length<2
+    ? 'Only one year of history so far \u2014 this chart fills out as more years of data come in.'
+    : 'Average kWh per day, by calendar month, so partial months and years still compare fairly.';
+}
+
+document.getElementById('viewSeg').addEventListener('click', (e)=>{
+  const btn = e.target.closest('button[data-view]');
+  if(!btn) return;
+  currentView = btn.dataset.view;
+  document.querySelectorAll('#viewSeg button').forEach(b=>b.classList.toggle('active', b===btn));
+  renderMainView();
+});
+document.getElementById('prevBtn').addEventListener('click', ()=>{
+  if(dailyMonthIndex>0){ dailyMonthIndex--; renderDailyView(); }
+});
+document.getElementById('nextBtn').addEventListener('click', ()=>{
+  if(dailyMonthIndex<dailyMonthKeys.length-1){ dailyMonthIndex++; renderDailyView(); }
+});
+
+function drawScatterChart(historyRows){
+  const ctx = document.getElementById('scatterChart');
+  const pts = historyRows.map(r=>({x:r.rad, y:r.kwh}));
+  const xs = pts.map(p=>p.x);
+  const minX = Math.min(...xs), maxX = Math.max(...xs);
+  if(scatterChartRef) scatterChartRef.destroy();
+  scatterChartRef = new Chart(ctx, {
+    type:'scatter',
+    data:{ datasets:[
+      { label:'Days', data:pts, backgroundColor:'rgba(46,111,163,0.55)', pointRadius:3 },
+      { label:'Fit', data:[{x:minX,y:window.__model.intercept+window.__model.slope*minX},{x:maxX,y:window.__model.intercept+window.__model.slope*maxX}], type:'line', borderColor:'#D98C1C', borderWidth:2, pointRadius:0 },
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{ x:{ title:{display:true,text:'Radiation (kWh/m²/day)'} }, y:{ title:{display:true,text:'Actual output (kWh)'}, beginAtZero:true } }
+    }
+  });
+}
+
+async function init(){
+  document.getElementById('loadingState').style.display='flex';
+  document.getElementById('errorState').style.display='none';
+  document.getElementById('appContent').style.display='none';
+
+  try{
+    const { merged, todayStr, forecastDaily } = await fetchWeather();
+
+    const trainingRows = [];
+    HISTORICAL.forEach(h=>{
+      const w = merged[h.date];
+      if(w && w.radMJ!=null){
+        trainingRows.push({ date:h.date, kwh:h.kwh, rad:w.radMJ*MJ_TO_KWH, cloud:w.cloud });
+      }
+    });
+
+    if(trainingRows.length < 20) throw new Error('Not enough overlapping weather history to calibrate a reliable model yet.');
+
+    const model = fitModel(trainingRows);
+    window.__model = model;
+
+    const historyRows = trainingRows.map(r=>({ date:r.date, kwh:r.kwh, rad:r.rad, cloud:r.cloud, modelled:predictKwh(model,r.rad,r.date) }));
+    allHistoryRows = historyRows; // set before building forecast rows so climatology can reference it
+
+    const apiByDate = {};
+    if(forecastDaily && forecastDaily.time){
+      forecastDaily.time.forEach((date,i)=>{
+        if(date < todayStr) return;
+        const radMJ = forecastDaily.shortwave_radiation_sum[i];
+        if(radMJ==null) return;
+        apiByDate[date] = { rad: radMJ*MJ_TO_KWH, cloud: forecastDaily.cloud_cover_mean[i] };
+      });
+    }
+
+    const forecastRows = [];
+    for(let i=0;i<FORECAST_LOOKAHEAD_DAYS;i++){
+      const date = addDays(todayStr, i);
+      const apiRow = apiByDate[date];
+      if(apiRow){
+        const pred = predictKwh(model, apiRow.rad, date);
+        const band = Math.min(model.rmse*2.5, model.rmse*(1+0.08*i));
+        forecastRows.push({ date, pred, band, cloud:apiRow.cloud, source:'forecast', leadDays:i });
+      } else {
+        const clim = climatologyEstimate(date);
+        forecastRows.push({ date, pred:clim.mean, band:clim.std, cloud:clim.avgCloud, source:'climatology', leadDays:i, sampleSize:clim.n });
+      }
+    }
+    lastForecastRows = forecastRows.filter(r=>r.source==='forecast').slice(0,16);
+    allForecastRows = forecastRows;
+    currentTodayStr = todayStr;
+
+    const keySet = new Set(allHistoryRows.map(r=>monthKeyOf(r.date)).concat(allForecastRows.map(r=>monthKeyOf(r.date))));
+    dailyMonthKeys = Array.from(keySet).sort();
+    const currentMonthKey = monthKeyOf(todayStr);
+    dailyMonthIndex = dailyMonthKeys.indexOf(currentMonthKey);
+    if(dailyMonthIndex === -1) dailyMonthIndex = dailyMonthKeys.length - 1;
+
+    const dp = document.getElementById('datePick');
+    dp.min = todayStr;
+    dp.max = addDays(todayStr, 60);
+    if(!dp.value) dp.value = todayStr;
+    document.getElementById('rangeHorizonNote').textContent = `Up to ${shortDate(dp.max)} — shows the 7 days that follow your pick.`;
+
+    document.getElementById('mR2').textContent = model.r2.toFixed(2);
+    document.getElementById('mRmse').textContent = model.rmse.toFixed(1)+' kWh';
+    document.getElementById('mDays').textContent = model.n;
+    document.getElementById('mPr').textContent = Math.round(model.performanceRatio*100)+'%';
+
+    let fitNote = '';
+    if(model.r2 < 0.5){
+      fitNote = 'The fit is looser than ideal, likely from day-to-day variability the model hasn\'t fully captured yet. Predictions still work but treat the confidence bands generously.';
+    } else if(model.r2 < 0.75){
+      fitNote = 'Decent fit. Radiation explains most of the day-to-day swing in your output, with the rest coming from cloud timing, temperature and normal variability.';
+    } else {
+      fitNote = 'Strong fit &mdash; radiation forecasts explain most of the variation in your daily output, so predictions should track closely.';
+    }
+    document.getElementById('fitNote').innerHTML = fitNote;
+
+    renderDayCards();
+    renderMainView();
+    renderRangeEstimate(dp.value);
+    drawScatterChart(historyRows);
+
+    document.getElementById('footerNote').innerHTML = `Calibrated on ${model.n} days of your uploaded production data (${trainingRows[0].date} to ${trainingRows[trainingRows.length-1].date}). Weather data from <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> (ERA5 reanalysis + forecast models), CC BY 4.0. Recalibrates automatically each time this loads. Last loaded ${new Date().toLocaleString('en-AU')}.`;
+
+    document.getElementById('headerMeta').textContent = `${LOCATION_LABEL} · ${SYSTEM_KW} kW array · calibrated against your uploaded history`;
+    document.getElementById('loadingState').style.display='none';
+    document.getElementById('appContent').style.display='block';
+  }catch(err){
+    document.getElementById('loadingState').style.display='none';
+    const box = document.getElementById('errorState');
+    box.style.display='block';
+    box.innerHTML = `Couldn't load live weather data: ${err.message}. If you're viewing this inside Claude's artifact panel and it keeps failing, try downloading the file and opening it directly in a browser &mdash; some in-app sandboxes block outside network requests. <br><br><button class="primary" onclick="init()">Try again</button>`;
+  }
+}
+
+// ---------- Setup: file parsing, geocoding, wiring ----------
+
+let parsedHistorical = null;
+let selectedLocation = null;
+let locationCandidates = [];
+
+function excelSerialToDate(n){
+  const ms = Math.round((n - 25569) * 86400 * 1000);
+  return new Date(ms);
+}
+function cellToDateStr(v){
+  if(v==null) return null;
+  if(v instanceof Date) return fmtDate(v);
+  if(typeof v === 'number') return fmtDate(excelSerialToDate(v));
+  if(typeof v === 'string'){
+    const m = v.trim().match(/^(\d{4}-\d{2}-\d{2})/);
+    if(m) return m[1];
+    const d = new Date(v);
+    if(!isNaN(d.getTime())) return fmtDate(d);
+  }
+  return null;
+}
+
+function parseWorkbookRows(wb){
+  const sheet = wb.Sheets[wb.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(sheet, { header:1, defval:null, raw:true });
+
+  let headerRowIdx=-1, dateColIdx=-1, solarColIdx=-1;
+  for(let r=0; r<Math.min(rows.length,20); r++){
+    const row = rows[r];
+    if(!row) continue;
+    let dCol=-1, sCol=-1;
+    row.forEach((cell,ci)=>{
+      if(typeof cell==='string'){
+        const c = cell.toLowerCase();
+        if(dCol===-1 && c.includes('date')) dCol=ci;
+        if(sCol===-1 && c.includes('solar') && (c.includes('production')||c.includes('generat')||c.includes('energy'))) sCol=ci;
+      }
+    });
+    if(dCol!==-1 && sCol!==-1){ headerRowIdx=r; dateColIdx=dCol; solarColIdx=sCol; break; }
+  }
+  if(headerRowIdx===-1) throw new Error('Couldn\'t find "Date" and "Solar Production" columns. Check this is the right export.');
+
+  const byDate = {};
+  for(let r=headerRowIdx+1; r<rows.length; r++){
+    const row = rows[r];
+    if(!row) continue;
+    const dateRaw = row[dateColIdx];
+    const solarRaw = row[solarColIdx];
+    if(dateRaw==null) continue;
+    if(typeof dateRaw === 'string' && dateRaw.trim().toLowerCase()==='total') continue;
+    const dateStr = cellToDateStr(dateRaw);
+    if(!dateStr) continue;
+
+    let kwh = null;
+    if(typeof solarRaw === 'number') kwh = solarRaw;
+    else if(typeof solarRaw === 'string'){
+      const s = solarRaw.trim();
+      if(s==='' || s==='--' || s.toLowerCase()==='n/a') continue;
+      const n = parseFloat(s);
+      if(!isNaN(n)) kwh = n;
+    }
+    if(kwh==null || isNaN(kwh) || kwh<0) continue;
+    byDate[dateStr] = Math.round(kwh*100)/100;
+  }
+
+  const records = Object.keys(byDate).sort().map(d=>({date:d, kwh:byDate[d]}));
+  if(records.length < 20) throw new Error(`Only found ${records.length} valid daily readings — need at least 20 days of history to calibrate a reliable model.`);
+  return records;
+}
+
+function updateGenerateButton(){
+  document.getElementById('generateBtn').disabled = !(parsedHistorical && selectedLocation);
+}
+
+document.getElementById('fileInput').addEventListener('change', async (e)=>{
+  const file = e.target.files[0];
+  const statusEl = document.getElementById('fileStatus');
+  parsedHistorical = null;
+  updateGenerateButton();
+  if(!file){ statusEl.textContent='Needs a "Date" column and a solar production/generation kWh column, one row per day.'; statusEl.className='note'; return; }
+  statusEl.textContent = 'Reading file…';
+  statusEl.className = 'note';
+  try{
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, { type:'array', cellDates:true });
+    const records = parseWorkbookRows(wb);
+    parsedHistorical = records;
+    statusEl.textContent = `✓ Parsed ${records.length} days (${records[0].date} to ${records[records.length-1].date}).`;
+    statusEl.className = 'note status-ok';
+  }catch(err){
+    statusEl.textContent = 'Could not read this file: ' + err.message;
+    statusEl.className = 'note status-err';
+  }
+  updateGenerateButton();
+});
+
+async function doLocationSearch(){
+  const q = document.getElementById('locationInput').value.trim();
+  const statusEl = document.getElementById('locationStatus');
+  const resultsEl = document.getElementById('locationResults');
+  selectedLocation = null;
+  updateGenerateButton();
+  resultsEl.innerHTML = '';
+  if(!q){ statusEl.textContent='Type a suburb, city or address first.'; statusEl.className='note status-err'; return; }
+  statusEl.textContent = 'Searching…';
+  statusEl.className = 'note';
+  try{
+    const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=6&language=en&format=json`;
+    const res = await fetch(url);
+    if(!res.ok) throw new Error('search request failed (' + res.status + ')');
+    const data = await res.json();
+    locationCandidates = data.results || [];
+    if(!locationCandidates.length){
+      statusEl.textContent = 'No matches found — try a nearby larger suburb or city.';
+      statusEl.className = 'note status-err';
+      return;
+    }
+    statusEl.textContent = 'Select the correct match:';
+    statusEl.className = 'note';
+    renderLocationResults();
+  }catch(err){
+    statusEl.textContent = 'Could not search: ' + err.message;
+    statusEl.className = 'note status-err';
+  }
+}
+
+function renderLocationResults(){
+  const resultsEl = document.getElementById('locationResults');
+  resultsEl.innerHTML = locationCandidates.map((r,i)=>{
+    const parts = [r.name, r.admin1, r.country].filter(Boolean);
+    return `<button type="button" class="loc-result" data-idx="${i}">${parts.join(', ')}</button>`;
+  }).join('');
+  resultsEl.querySelectorAll('.loc-result').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const idx = parseInt(btn.dataset.idx,10);
+      const r = locationCandidates[idx];
+      const label = [r.name, r.admin1, r.country].filter(Boolean).join(', ');
+      selectedLocation = { lat:r.latitude, lon:r.longitude, tz:r.timezone || 'UTC', label };
+      resultsEl.querySelectorAll('.loc-result').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('locationStatus').textContent = `Using ${label} (${r.latitude.toFixed(3)}, ${r.longitude.toFixed(3)}).`;
+      document.getElementById('locationStatus').className = 'note status-ok';
+      updateGenerateButton();
+    });
+  });
+}
+
+document.getElementById('locationSearchBtn').addEventListener('click', doLocationSearch);
+document.getElementById('locationInput').addEventListener('keydown', (e)=>{
+  if(e.key==='Enter'){ e.preventDefault(); doLocationSearch(); }
+});
+
+function beginForecast(historical, location, systemKw){
+  HISTORICAL = historical;
+  LAT = location.lat;
+  LON = location.lon;
+  TZ = location.tz;
+  LOCATION_LABEL = location.label;
+  SYSTEM_KW = systemKw;
+
+  document.getElementById('setupCard').style.display='none';
+  document.getElementById('changeSetupBtn').style.display='inline-block';
+  document.getElementById('refreshBtn').style.display='inline-block';
+  document.getElementById('loadingText').textContent = `Fetching weather data for ${LOCATION_LABEL}…`;
+  init();
+}
+
+document.getElementById('generateBtn').addEventListener('click', ()=>{
+  if(!parsedHistorical || !selectedLocation) return;
+  const sizeVal = parseFloat(document.getElementById('systemSizeInput').value);
+  const systemKw = (!isNaN(sizeVal) && sizeVal>0) ? sizeVal : 7.4;
+  beginForecast(parsedHistorical, selectedLocation, systemKw);
+});
+
+document.getElementById('demoBtn').addEventListener('click', ()=>{
+  // Reflect the demo choice in the setup form too, so "Change setup" shows what's active
+  parsedHistorical = DEMO_HISTORICAL;
+  selectedLocation = DEMO_LOCATION;
+  document.getElementById('fileStatus').textContent = `✓ Demo data — ${DEMO_HISTORICAL.length} days (${DEMO_HISTORICAL[0].date} to ${DEMO_HISTORICAL[DEMO_HISTORICAL.length-1].date}).`;
+  document.getElementById('fileStatus').className = 'note status-ok';
+  document.getElementById('locationInput').value = 'Sydney NSW';
+  document.getElementById('locationResults').innerHTML = '';
+  document.getElementById('locationStatus').textContent = `Using ${DEMO_LOCATION.label} (demo).`;
+  document.getElementById('locationStatus').className = 'note status-ok';
+  document.getElementById('systemSizeInput').value = DEMO_SYSTEM_KW;
+  updateGenerateButton();
+
+  beginForecast(DEMO_HISTORICAL, DEMO_LOCATION, DEMO_SYSTEM_KW);
+});
+
+document.getElementById('changeSetupBtn').addEventListener('click', ()=>{
+  document.getElementById('appContent').style.display='none';
+  document.getElementById('loadingState').style.display='none';
+  document.getElementById('errorState').style.display='none';
+  document.getElementById('setupCard').style.display='block';
+});
+
+document.getElementById('refreshBtn').addEventListener('click', init);
+
+function openMethodologyModal(){
+  const statsEl = document.getElementById('modalStats');
+  if(window.__model){
+    const m = window.__model;
+    const corrections = Object.values(m.monthlyCorrection);
+    const maxCorr = corrections.length ? Math.max(...corrections.map(Math.abs)) : 0;
+    statsEl.innerHTML = `<b>Your current calibration:</b> R² = ${m.r2.toFixed(2)}, typical error = ±${m.rmse.toFixed(1)} kWh/day, fitted on ${m.n} days, performance ratio ≈ ${Math.round(m.performanceRatio*100)}%. Largest monthly seasonal correction currently applied: ${maxCorr.toFixed(1)} kWh/day.`;
+  } else {
+    statsEl.textContent = 'Run a forecast first to see your own calibration numbers here.';
+  }
+  document.getElementById('methodologyBackdrop').classList.add('open');
+}
+function closeMethodologyModal(){
+  document.getElementById('methodologyBackdrop').classList.remove('open');
+}
+document.getElementById('methodologyBtn').addEventListener('click', openMethodologyModal);
+document.getElementById('methodologyCloseBtn').addEventListener('click', closeMethodologyModal);
+document.getElementById('methodologyBackdrop').addEventListener('click', (e)=>{
+  if(e.target.id==='methodologyBackdrop') closeMethodologyModal();
+});
+document.addEventListener('keydown', (e)=>{
+  if(e.key==='Escape') closeMethodologyModal();
+});
+</script>
+</body>
+</html>
+
+{% endraw %}
