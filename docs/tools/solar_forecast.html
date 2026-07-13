@@ -248,21 +248,15 @@ input[type="file"]{ font-family:'Inter',sans-serif; font-size:13px; color:var(--
     </div>
 
     <div class="card">
-      <p class="section-label">Daily forecast</p>
-      <div class="days" id="dayCards"></div>
-      <div class="toggle-row"><button id="toggleDays">Show 16-day outlook</button></div>
-    </div>
-
-    <div class="card">
-      <p class="section-label">Estimate for any 7-day window</p>
+      <p class="section-label">16-day outlook</p>
       <div class="range-pick-row">
-        <label for="datePick">Start date</label>
+        <label for="datePick">Starting</label>
         <input type="date" id="datePick">
         <span class="note" id="rangeHorizonNote" style="margin:0;"></span>
       </div>
-      <div class="days" id="rangeCards"></div>
+      <div class="days" id="dayCards"></div>
       <div class="metrics" style="margin-top:14px;">
-        <div class="metric"><div class="num" id="rangeTotal">–</div><div class="lbl">7-day total (kWh)</div></div>
+        <div class="metric"><div class="num" id="rangeTotal">–</div><div class="lbl">16-day total (kWh)</div></div>
         <div class="metric"><div class="num" id="rangeAvg">–</div><div class="lbl">Avg per day (kWh)</div></div>
       </div>
       <p class="note" id="rangeNote"></p>
@@ -427,17 +421,6 @@ function sunCloudIcon(cloud){
   </svg>`;
 }
 
-function confidenceTier(leadDays){
-  if(leadDays<=2) return {cls:'high', label:'High confidence'};
-  if(leadDays<=6) return {cls:'med', label:'Medium confidence'};
-  return {cls:'low', label:'Outlook'};
-}
-
-function sourceTier(row){
-  if(row.source==='climatology') return {cls:'low', label:'Seasonal estimate'};
-  return confidenceTier(row.leadDays);
-}
-
 function dayOfYear(dateStr){
   const d = new Date(dateStr+'T00:00:00Z');
   const start = Date.UTC(d.getUTCFullYear(),0,1);
@@ -467,47 +450,26 @@ function climatologyEstimate(targetDateStr){
   }
 }
 
-let showAll16 = false;
-let lastForecastRows = [];
-
-function renderDayCards(){
-  const el = document.getElementById('dayCards');
-  const rows = showAll16 ? lastForecastRows : lastForecastRows.slice(0,7);
-  el.innerHTML = rows.map((r,i)=>{
-    const tier = sourceTier(r);
-    return `<div class="day ${i===0?'today':''}">
-      <div class="wd">${i===0?'Today':weekday(r.date)}</div>
-      <div class="dt">${shortDate(r.date)}</div>
-      ${sunCloudIcon(r.cloud)}
-      <div class="kwh">${r.pred.toFixed(1)}</div>
-      <div class="rng">±${r.band.toFixed(1)} kWh</div>
-      <div class="cc">${cloudLabel(r.cloud)} · ${r.cloud!=null?Math.round(r.cloud):'–'}% cloud</div>
-      <span class="pill ${tier.cls}">${tier.label}</span>
-    </div>`;
-  }).join('');
-}
-
-document.getElementById('toggleDays').addEventListener('click', ()=>{
-  showAll16 = !showAll16;
-  document.getElementById('toggleDays').textContent = showAll16 ? 'Show 7-day forecast' : 'Show 16-day outlook';
-  renderDayCards();
-});
+const OUTLOOK_DAYS = 16;
 
 function renderRangeEstimate(startDateStr){
   const rows = [];
-  for(let i=0;i<7;i++){
+  for(let i=0;i<OUTLOOK_DAYS;i++){
     const date = addDays(startDateStr, i);
     rows.push(allForecastRows.find(r=>r.date===date) || null);
   }
+  const isToday = startDateStr === currentTodayStr;
 
-  document.getElementById('rangeCards').innerHTML = rows.map((r,i)=>{
+  document.getElementById('dayCards').innerHTML = rows.map((r,i)=>{
     const date = addDays(startDateStr, i);
-    if(!r) return `<div class="day"><div class="wd">${weekday(date)}</div><div class="dt">${shortDate(date)}</div><div class="kwh">–</div></div>`;
+    const todayCls = (isToday && i===0) ? 'today' : '';
+    const wdLabel = (isToday && i===0) ? 'Today' : weekday(date);
+    if(!r) return `<div class="day ${todayCls}"><div class="wd">${wdLabel}</div><div class="dt">${shortDate(date)}</div><div class="kwh">–</div></div>`;
     const cloudTxt = r.source==='climatology'
       ? `${cloudLabel(r.cloud)} · ~${r.cloud!=null?Math.round(r.cloud):'–'}% avg cloud`
       : `${cloudLabel(r.cloud)} · ${r.cloud!=null?Math.round(r.cloud):'–'}% cloud`;
-    return `<div class="day">
-      <div class="wd">${weekday(r.date)}</div>
+    return `<div class="day ${todayCls}">
+      <div class="wd">${wdLabel}</div>
       <div class="dt">${shortDate(r.date)}</div>
       ${sunCloudIcon(r.cloud)}
       <div class="kwh">${r.pred.toFixed(1)}</div>
@@ -527,7 +489,7 @@ function renderRangeEstimate(startDateStr){
   const hasForecast = valid.some(r=>r.source==='forecast');
   const hasClim = valid.some(r=>r.source==='climatology');
   let note;
-  if(hasForecast && !hasClim) note = 'All 7 days fall within the live 16-day weather forecast.';
+  if(hasForecast && !hasClim) note = `All ${OUTLOOK_DAYS} days fall within the live 16-day weather forecast.`;
   else if(hasClim && !hasForecast) note = 'Beyond the 16-day weather forecast horizon, so these days are seasonal estimates built from your own history around this time of year \u2014 not a cloud cover prediction, just what\u2019s typical.';
   else note = 'The earlier days use the live weather forecast; later days in this window shift to a seasonal estimate once the forecast horizon runs out.';
   document.getElementById('rangeNote').textContent = note;
@@ -784,7 +746,6 @@ async function init(){
         forecastRows.push({ date, pred:clim.mean, band:clim.std, cloud:clim.avgCloud, source:'climatology', leadDays:i, sampleSize:clim.n });
       }
     }
-    lastForecastRows = forecastRows.filter(r=>r.source==='forecast').slice(0,16);
     allForecastRows = forecastRows;
     currentTodayStr = todayStr;
 
@@ -798,7 +759,7 @@ async function init(){
     dp.min = todayStr;
     dp.max = addDays(todayStr, 60);
     if(!dp.value) dp.value = todayStr;
-    document.getElementById('rangeHorizonNote').textContent = `Up to ${shortDate(dp.max)} — shows the 7 days that follow your pick.`;
+    document.getElementById('rangeHorizonNote').textContent = `Pick any start date up to ${shortDate(dp.max)} — shows the 16 days that follow it.`;
 
     document.getElementById('mR2').textContent = model.r2.toFixed(2);
     document.getElementById('mRmse').textContent = model.rmse.toFixed(1)+' kWh';
@@ -815,7 +776,6 @@ async function init(){
     }
     document.getElementById('fitNote').innerHTML = fitNote;
 
-    renderDayCards();
     renderMainView();
     renderRangeEstimate(dp.value);
     drawScatterChart(historyRows);
