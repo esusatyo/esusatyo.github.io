@@ -16,5 +16,5 @@ You can find me on the internet:
 Some of the things I have vibe coded lately:
 - [Sydney golf finder](https://esusatyo.net/sydney-golf-finder/)
 - [Sydney tennis finder](https://esusatyo.net/sydney-tennis-finder/)
-- [Fujifilm camera comparison tool](https://esusatyo.net/fuji-compare-tool/)
+- [Compare Camera Specs](https://comparecameraspecs.com)
 - [Solar Forecast](https://esusatyo.net/solar_forecast.html)
